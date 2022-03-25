@@ -45,11 +45,25 @@
         "silk_text_upright": false,
         "zones": {
           "45_degree_only": false,
-          "min_clearance": 0.508
+          "min_clearance": 0.0
         }
       },
-      "diff_pair_dimensions": [],
-      "drc_exclusions": [],
+      "diff_pair_dimensions": [
+        {
+          "gap": 0.0,
+          "via_gap": 0.0,
+          "width": 0.0
+        }
+      ],
+      "drc_exclusions": [
+        "clearance|144780000|74168000|a7b56a88-e221-4082-8461-98d493bdd118|ab7b0fa5-321f-4d00-a6ee-0b4a696f92f6",
+        "clearance|145288000|72644000|95b6136a-33c6-4085-b658-a889f7d91e51|ab7b0fa5-321f-4d00-a6ee-0b4a696f92f6",
+        "clearance|146812000|74168000|95b6136a-33c6-4085-b658-a889f7d91e51|3922b7d6-65f4-437b-862d-647588e1eb45",
+        "clearance|147320000|72644000|43d1e6e1-e08a-423f-86bb-a507a155b196|3922b7d6-65f4-437b-862d-647588e1eb45",
+        "clearance|147320000|73406000|d03921e3-ff98-4f59-bfd7-54b50079eb4b|95b6136a-33c6-4085-b658-a889f7d91e51",
+        "clearance|170815000|69850000|2e14e268-9f39-43bf-8db2-2edd496acd47|fd58f0c5-1972-4b9d-9bf5-17db58090928",
+        "clearance|171323000|68326000|e1dcca13-0b9f-4661-89fa-743de07aab78|fd58f0c5-1972-4b9d-9bf5-17db58090928"
+      ],
       "meta": {
         "version": 2
       },
@@ -79,8 +93,8 @@
         "padstack": "error",
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
-        "silk_over_copper": "warning",
-        "silk_overlap": "warning",
+        "silk_over_copper": "ignore",
+        "silk_overlap": "ignore",
         "skew_out_of_range": "error",
         "through_hole_pad_without_hole": "error",
         "too_many_vias": "error",
@@ -112,8 +126,19 @@
         "solder_mask_min_width": 0.0,
         "use_height_for_length_calcs": true
       },
-      "track_widths": [],
-      "via_dimensions": [],
+      "track_widths": [
+        0.0,
+        0.2,
+        0.254,
+        0.508,
+        1.0
+      ],
+      "via_dimensions": [
+        {
+          "diameter": 0.0,
+          "drill": 0.0
+        }
+      ],
       "zones_allow_external_fillets": false,
       "zones_use_no_outline": true
     },
@@ -252,33 +277,33 @@
         0,
         2,
         2,
-        2,
-        2
-      ],
-      [
-        0,
-        2,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        2,
-        0,
         0,
         2
       ],
       [
         0,
         2,
-        1,
+        0,
         1,
         0,
         0,
         1,
         0,
         2,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        2,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
         0,
         0,
         2
@@ -319,7 +344,7 @@
       "no_connect_dangling": "warning",
       "pin_not_connected": "error",
       "pin_not_driven": "error",
-      "pin_to_pin": "warning",
+      "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "similar_labels": "warning",
       "unannotated": "error",
@@ -333,7 +358,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "foc.kicad_pro",
+    "filename": "esc.kicad_pro",
     "version": 1
   },
   "net_settings": {
