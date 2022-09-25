@@ -157,7 +157,7 @@ _foc_update:
 	push w3
 
 	;; Update velocity PID loop
-	rcall _velocity_pid_update
+	;; rcall _velocity_pid_update
 
 	pop w3
 	pop w2
