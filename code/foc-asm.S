@@ -225,8 +225,8 @@ _foc_update:
 	mov w5, _con_vd
 	
 	;; Comment out!
-	;; mov _vq, w6
-	;; mov _vd, w5
+	mov _vq, w6
+	mov _vd, w5
 	
 	;; Get sin and cos back
 	pop w7

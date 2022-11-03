@@ -490,7 +490,7 @@ int main(void)
      vq = -0.5r;
      vd = 0;
 
-     target_q = 0.2r;
+     target_q = 0.1r;
      target_d = 0r;
 
      while(1);
