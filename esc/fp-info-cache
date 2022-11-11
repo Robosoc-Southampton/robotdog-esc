@@ -1,4 +1,4 @@
-20456960264462785
+20460316999003991
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -86009,12 +86009,19 @@ varistor
 2
 2
 footprints
-EdgePad_20x03
+EdgeConnector_4
 
 
 0
+4
+4
+footprints
+EdgeConnector_5
+
+
 0
-0
+5
+5
 footprints
 HorizontalCap_10x16_P5
 
@@ -86043,6 +86050,13 @@ Pads_03
 0
 0
 0
+footprints
+ProgConnector
+
+
+0
+5
+5
 footprints
 UQFN-36
 UQFN, 40 Pin (http://ww1.microchip.com/downloads/en/PackagingSpec/00000049BQ.pdf#page=345), generated with kicad-footprint-generator ipc_noLead_generator.py
