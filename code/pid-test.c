@@ -2,34 +2,14 @@
 #include <ctype.h>
 #include <stdint.h>
 #include "foc-asm.h"
-#include "adc.h"
-#include "hall.h"
-#include "pwm.h"
-#include "i2c.h"
-#include "utils.h"
 
 #pragma config IESO = OFF
 #pragma config FNOSC = FRCPLL
-#pragma config ICS = PGD2
-#pragma config ALTI2C1 = OFF
 
-enum state_type {
-     STATE_OFF,
-     STATE_SET_I2C_ADDR,
-     STATE_I2C_TEST,
-     STATE_CALIBRATE_ADC,
-     STATE_RUNNING,
-} state_t;
+#define ANGLE_60 4000
+#define ANGLE_360 24000
 
-/* kp, ki, kd */
-_Fract velocity_pid_consts[3] = {0.3r, 0.01r, 0r};
-/* Shifts to apply to P, I, D, and result (positive = right shift) */
-int16_t vel_pid_shifts[4] = {0, 5, 0, -4};
-_Fract pid_current_limits[2] = {-0.15r, 0.15r};
-
-_Fract current_pid_consts[3] = {0.01r, 0.001r, 0r};
-_Fract pid_voltage_limits[2] = {-0.5r, 0.5r};
-int16_t current_pid_shifts[4] = {0, 0, 0, -8};
+#define BEMF_EPSILON 100
 
 void config_osc(void)
 {
@@ -45,11 +25,97 @@ void config_osc(void)
 	  ;
 }
 
-void config_io(void)
-{
-     TRISB |= 0b1111; /* GPIO */
-     CNPUB |= 0b1111; /* Pull-ups on GPIOs */
-}
+/* void config_adc(void) */
+/* { */
+/*      ANSELC |= 0b11; */
+/*      TRISC |= 0b11; */
+     
+/*      ADCON1Hbits.FORM = 1; /\* Fractional *\/ */
+/*      ADCON1Hbits.SHRRES = 0b11; /\* 12 bit resolution *\/ */
+/*      ADCON3Lbits.REFSEL = 0; /\* AVdd *\/ */
+/*      ADCON3Hbits.CLKSEL = 0b10; /\* Fvco / 3   (267MHz) *\/ */
+/*      ADCON3Hbits.CLKDIV = 0; */
+/*      ADCON2Lbits.SHRADCS = 0; /\* Clock divided by 2 (133MHz) *\/ */
+/*      ADCON2Hbits.SHRSAMC = 0; /\* Divided by 2 again (67MHz) *\/ */
+
+/*      /\* Phase A - channel 12, phase B - channel 13 *\/ */
+/*      ADMOD0Hbits.SIGN12 = 0; /\* Unsigned *\/ */
+/*      ADMOD0Hbits.SIGN13 = 0; /\* Unsigned *\/ */
+     
+/*      ADCON5Hbits.WARMTIME = 0b1010; /\* 1024 clock periods = 15us *\/ */
+/*      ADCON1Lbits.ADON = 1; */
+/*      ADCON5Lbits.SHRPWR = 1; */
+/*      while (!ADCON5Lbits.SHRRDY) */
+/* 	  ; */
+/*      ADCON3Hbits.SHREN = 1; */
+     
+/*      ADTRIG3Lbits.TRGSRC12 = 0b00100; /\* PWM1 trigger 1 *\/ */
+/*      ADTRIG3Lbits.TRGSRC13 = 0b00110; /\* PWM2 trigger 1 *\/ */
+/* } */
+
+/* void config_pwm(void) */
+/* { */
+/*      /\* PWM1 triggers current measurement for phase A, PWM2 triggers */
+/*       * current measurement for phase B. Phase A is measured near the */
+/*       * maximum timer point and phase B is measured near the bottom, */
+/*       * both during the time when all three phases are low. Both */
+/*       * require a postscaler of 2, so that they are triggered at the */
+/*       * right times. *\/ */
+
+/*      TRISB &= ~(0b111111 << 10); */
+     
+/*      PCLKCON = 0b01; /\* No divider, master clock source is Fvco/2 *\/ */
+/*      MPER = 7999; /\* Period of 20us *\/ */
+     
+/*      /\* Master clock, center-aligned *\/ */
+/*      PG1CONL = 0b0000000000001100; */
+/*      PG2CONL = 0b0000000000001100; */
+/*      PG3CONL = 0b0000000000001100; */
+
+/*      /\* Local registers except PER, trigger and start of */
+/*       * cycle. Trigger is local for PG1 and PG1 for the others. Master */
+/*       * update enabled for PG1 *\/ */
+/*      PG1CONH = 0b0100100000000000; /\* SOC update *\/ */
+/*      PG2CONH = 0b0100001000000001; /\* Client SOC update *\/ */
+/*      PG3CONH = 0b0100001000000001; /\* Client SOC update *\/ */
+     
+/*      /\* Enable pins, H active high, L active low *\/ */
+/*      PG1IOCONH = 0b1101; */
+/*      PG2IOCONH = 0b1101; */
+/*      PG3IOCONH = 0b1101; */
+
+/*      /\* ADC trigger + postscaler, manual update requests, EOC as trigger *\/ */
+/*      PG1EVTL = 0b0000000100000000; */
+/*      PG2EVTL = 0b0000000100000000; */
+/*      PG3EVTL = 0b0000000000000000; */
+
+/*      /\* Interrupts, ADC trigger 2, trigger 1 offset *\/ */
+/*      PG1EVTH = 0b0000001100000000; */
+/*      PG2EVTH = 0b0000001000000000; /\* Enable interrupt at ADC trigger 1 *\/ */
+/*      PG3EVTH = 0b0000001100000000; */
+
+/*      /\* Duty cycle = 50% (min 8, max 7992) *\/ */
+/*      PG1DC = 4000; */
+/*      PG2DC = 4000; */
+/*      PG3DC = 4000; */
+
+/*      /\* Trigger A at 7800 and 199 for 0.5us either side *\/ */
+/*      PG1TRIGA = 7800 | (1 << 15); /\* Second half *\/ */
+/*      PG2TRIGA = 199 | (0 << 15); /\* First half *\/ */
+
+/*      /\* Dead-time of 1us *\/ */
+/*      PG1DTH = 400; */
+/*      PG1DTL = 400; */
+/*      PG2DTH = 400; */
+/*      PG2DTL = 400; */
+/*      PG3DTH = 400; */
+/*      PG3DTL = 400; */
+
+/*      /\* Enable generators *\/ */
+/*      PG1CONL |= 0x8000; */
+/*      PG2CONL |= 0x8000; */
+/*      PG3CONL |= 0x8000; */
+/* } */
 
 /* void config_qei(void) */
 /* { */
@@ -58,123 +124,62 @@ void config_io(void)
 /*      QEI1CONbits.CCM = 0; /\* Quadrature Encoder mode *\/ */
 /* } */
 
-uint16_t point = 0;
+/* void config_spi(void) */
+/* { */
 
-uint16_t pwms[128][3];
-uint16_t theta = 0;
+/* } */
 
+/* void update_spi(void) */
+/* { */
+
+/* } */
+
+/* void set_pwms(uint16_t pwm_a, uint16_t pwm_b, uint16_t pwm_c) */
+/* { */
+
+/* } */
+
+uint16_t x[10] = {0x5555, 0x5555};
+     
+//uint16_t x2 = 0x5555;
 int main(void)
 {
+     _Fract pid_constants[3] = { 0.1r, 0.1r, 0.1r };
+     _Fract pid_minmax[2] = { -0.5r, 0.5r };
+     uint16_t pid_i[3] = { 0 };
+     _Fract out = 0;
+
+     _Fract trials[][4] = {
+	  /*{0r, 0r, 0r, 0r},
+	  {0.3r, 0.3r, 0r, 0r},
+	  {0.3r, 0r, 0r, 0r},
+	  {0.3r, 0r, 0r, 0.2r},
+	  {0.3r, 0r, 0r, -0.2r},
+	  {0.9r, 0.6r, 0r, 0r},
+	  {0.9r, 0.6r, 0r, -0.1r},*/
+	  {0r, 0r, 0r, 0.6r},
+	  {0r, 0r, 0r, -0.6r},
+     };
+
+     int t;
+     _Fract integral;
+
      /* Config stuff */
      config_osc();
-     config_pwm();
-     config_adc();
-     config_hall();
-     config_io();
-     config_i2c();
-     
-     INTCON2bits.GIE = 1;
-     IEC6 |= (1 << 8);
 
-     vq = 0.2r;
-     vd = 0;
-
-     target_q = 0.01r;
-     target_d = 0r;
-
-     while(1);
+     while(1)
+     {
+	  for (t=0; t < 2; t++) {
+	       out = pid_update(pid_constants, pid_minmax, trials[t][0],
+				&trials[t][1], &trials[t][2]);
+	       integral = trials[t][2];
+	       out += 0.1r;
+	  }
+	       
+     }
      
      return 0;
 }
-
-/* Called when the measurement for the phase B current starts */
-void _ISR _ADCAN13Interrupt(void)
-{
-     _Fract ia = 0, ib = 0, sin_theta = 0, cos_theta = 0;
-     uint16_t theta = 0;
-     static uint16_t state = STATE_OFF;
-     static uint32_t count = 0, count2 = 0;
-     int16_t vel = 0;
-     uint8_t tmp = 0;
-
-     /* tmp = pwm_output_is_high(PWM_OUT_A); */
-     /* count++; */
-
-     i2c_state_step();
-     
-     /* Wait for conversion to complete */
-     if (!ADSTATLbits.AN13RDY) {
-	  count2++;
-	  return;
-     }
-
-     begin_sample();
-     
-     if (PG1STAT & 2) {
-	  /* PWM "on-cycle" - all phases high */
-	  do_calibrate_adcs();
-     } else {
-	  /* PWM "off-cycle" - all phases low */
-	  switch (state) {
-	  case STATE_OFF:
-	       state = STATE_SET_I2C_ADDR;
-	       break;
-	       
-	  case STATE_SET_I2C_ADDR:
-	       i2c_set_addr(I2C_ADDR_BASE);// + (PORTB & 0b1111));
-	       state = STATE_I2C_TEST;
-	       state = STATE_CALIBRATE_ADC;
-	       break;
-
-	  case STATE_I2C_TEST:
-	       i2c_state_step();
-	       break;
-	       
-	  case STATE_CALIBRATE_ADC:
-	       if (adc_calibration_done()) {
-		    state = STATE_RUNNING;
-	       }
-	       break;
-	       
-	  case STATE_RUNNING:
-	       /* 1.0 = 20A, -1.0 = -20A */
-	       /* 0.05 = 1A, 0.01 = 200mA */
-	       ia = read_ia();
-	       ib = read_ib();
-	       
-	       /* Calculate sin and cos of rotor angle */
-	       theta = hall_get_angle();
-	       //theta = 4000;
-	       push_data_point(CHAN_THETA, theta);
-	       
-	       sin_theta = fract_sin(theta);
-	       cos_theta = fract_cos(theta);
-
-	       target_velocity = 0.01r;
-	       vel = hall_get_velocity() >> 10;
-	       push_data_point(CHAN_VEL, vel);
-	       
-	       /* 1 rps = 7.15e-4, 1400 rps = 1 */
-	       curr_velocity = *(_Fract *)(&vel);
-	       
-	       /* Determine updated PWM */
-	       foc_update(ia, ib, sin_theta, cos_theta);
-
-	       /* Push current/voltage data */
-	       push_data_point_fp(CHAN_ID, id);
-	       push_data_point_fp(CHAN_IQ, iq);
-	       push_data_point_fp(CHAN_VD, vd);
-	       push_data_point_fp(CHAN_VQ, vq);
-	       
-	       /* Update PWM */
-	       set_pwm_by_times(pwm_ta, pwm_tb, pwm_tc);
-	       
-	       break;
-	  }
-     }
-     IFS6 &= ~(1 << 8);
-}
-
 
 /* /\** Ramp mode */
 /*  * - Return angle equal to timer value */
@@ -215,11 +220,39 @@ void _ISR _ADCAN13Interrupt(void)
 /*      return tmr / RAMP_MAX; */
 /* } */
 
-/* /\** Determining rotor angle in rotary encoder mode */
-/*  * - QEI module provides count and pulse timer */
-/*  * - Last period length used to determine speed */
-/*  * - Angle calculated using count, speed and time since last period */
+/* /\** Determining rotor angle in hall sensor mode */
+/*  * - Interrupt on change of any hall pin */
+/*  * - Store last two changes and measure time between them */
+/*  * - Use time to calculate speed, and estimate rotor angle */
 /*  *\/ */
+
+/* uint16_t prev_state = 0; /\* Bit 0 = A *\/ */
+
+/* void config_hall(void) */
+/* { */
+/*      /\* RC3=HALL_A, RC4=HALL_B, RC5=HALL_C *\/ */
+/*      TRISC |= 0b111000; */
+/*      ANSELC &= ~0b111000; */
+/*      CNCONCbits.ON = 1; */
+/*      CNCONCbits.CNSTYLE = 1; /\* Edge notification *\/ */
+/*      CNEN0C |= 0b111000; */
+/*      CNEN1C |= 0b111000; */
+
+/*      /\* Initialise prev_state *\/ */
+/*      uint16_t x = PORTC; */
+/*      prev_state = ((x >> 3) & 0b111); */
+/*      if ((prev_state == 0) || (prev_state == 0b111)) { */
+/* 	  // Error */
+/*      } */
+
+/*      /\* Set up CCP1 as 32 bit timer *\/ */
+/*      CCP1PRL = 0xFFFF; */
+/*      CCP1PRH = 0xFFFF; */
+/*      CCP1CON1Lbits.MOD = 0; */
+/*      CCP1CON1Lbits.T32 = 1; */
+/*      CCP1CON1Lbits.CLKSEL = 0; /\* Peripheral clock = Fosc/2 = 100MHz *\/ */
+/*      CCP1CON1Lbits.CCPON = 1; */
+/* } */
 
 /* int16_t hall_angle_prev, hall_angle_curr; /\* Previous and current angles *\/ */
 /* uint32_t hall_timer; /\* Time between them *\/ */
@@ -228,7 +261,7 @@ void _ISR _ADCAN13Interrupt(void)
 /*  * A on, B off, C on, A off, B on, C off. */
 /*  * A transition between two adjacent states indicates that the rotor is */
 /*  * at a particular angle. Only the first state-change in a row at a particular */
-/*  * angle is recorded to avoid errors due to noise. */
+/*  * angle is recorded to avoid errors due to noise.  */
 /*  *\/ */
 /* void hall_ioc_irq(void) */
 /* { */
@@ -313,6 +346,12 @@ void _ISR _ADCAN13Interrupt(void)
 
 /*      return (uint16_t)angle; */
 /* } */
+
+/* /\** Determining rotor angle in rotary encoder mode */
+/*  * - QEI module provides count and pulse timer */
+/*  * - Last period length used to determine speed */
+/*  * - Angle calculated using count, speed and time since last period */
+/*  *\/ */
 
 /* void config_rot(void) */
 /* { */
@@ -423,4 +462,20 @@ void _ISR _ADCAN13Interrupt(void)
 /* } */
 
 
+/* /\* Called when the measurement for the phase B current starts *\/ */
+/* void adc_irq(void) */
+/* { */
+/*      _Fract ia = 0, ib = 0, sin_theta = 0, cos_theta = 0; */
+     
+/*      /\* Wait for conversion to complete *\/ */
+/*      while (!ADSTATLbits.AN13RDY) */
+/* 	  ; */
+
+/*      /\* Calculate sin and cos of rotor angle *\/ */
+
+/*      /\* Determine updated PWM *\/ */
+/*      foc_update(ia, ib, sin_theta, cos_theta); */
+     
+/*      /\* Update PWM *\/ */
+/* } */
      
