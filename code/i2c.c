@@ -74,16 +74,22 @@ static void i2c_process_data(int8_t reg, uint8_t data)
 	       sample_div_counter = 0;
 	       break;
 	  case REG_WAVEFORM_SCALE:
+	       set_waveform_scale(i2c_registers[curr_reg]);
 	       break;
 	  case REG_WAVEFORM_DELAY:
+	       set_waveform_delay(i2c_registers[curr_reg]);
 	       break;
 	  case REG_WAVEFORM_C(0):
+	       buffer_coeff(0, i2c_registers[curr_reg]);
 	       break;
 	  case REG_WAVEFORM_C(1):
+	       buffer_coeff(1, i2c_registers[curr_reg]);
 	       break;
 	  case REG_WAVEFORM_C(2):
+	       buffer_coeff(2, i2c_registers[curr_reg]);
 	       break;
 	  case REG_WAVEFORM_C(3):
+	       buffer_coeff(3, i2c_registers[curr_reg]);
 	       break;
 	  case REG_BUFFER_AVAILABLE:
 	       if (i2c_registers[REG_BUFFER_AVAILABLE] == 0)
@@ -206,6 +212,11 @@ void i2c_state_step(void)
 	 (MSG_RECEIVED && ADDRESS_MSG))
      {
 	  i2c_state = I2C_IDLE;
+
+	  /* In case the previous transmission included coefficients,
+	     flush them so the controller knows the transmission has
+	     finished */
+	  flush_coeffs();
      }
      
      switch (i2c_state)

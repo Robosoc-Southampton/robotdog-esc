@@ -20,7 +20,7 @@ prev_err_d:	.2byte 0
 prev_err_q:	.2byte 0
 
 integral_d:	.2byte 0, 0, 0
-integral_q:	.2byte 0, 0, 0
+sv_x4:		.2byte 0, 0, 0
 
 vel_prev_err:	.2byte 0
 vel_integral:	.2byte 0, 0, 0
@@ -120,30 +120,7 @@ _pid_update:
 
 	return
 
-	.global _velocity_pid_update
-_velocity_pid_update:
-	;; Load parameters
-	mov #_velocity_pid_consts, w0
-	mov #_pid_current_limits, w1
-	mov _target_velocity, w2
-	mov _curr_velocity, w3
 
-	;; Calculate error (target - current)
-	sub w2, w3, w2
-	
-	mov #vel_prev_err, w3
-	mov #vel_integral, w4
-	mov #_vel_pid_shifts, w5
-
-	;; Call the PID function
-	rcall _pid_update
-
-	mov w0, _target_q
-	mov #0, w1
-	mov w1, _target_d
-	
-	return
-	
 	.global _foc_update
 	;; Phase A and B currents stored in w0 and w1 respectively
 	;; Sin and cos of phase angle stored in w2 and w3 respectively
@@ -196,7 +173,7 @@ _foc_update:
 	push w4
 	push w7
 	
-	;; PID loop to calculate Vd and Vq
+	
 	;; Target currents stored in _target_q and _target_d
 	mov #_current_pid_consts, w0		; Constants in w0
 	mov #_pid_voltage_limits, w1		; Limits in w1
@@ -208,21 +185,53 @@ _foc_update:
 	
 	rcall _pid_update
 	mov w0, w9		; Vd in w9
+
+	;; Load sv_x4 into acc A
+	mov #sv_x4, w0
+	lac.d [w0], A
+	clr B
 	
-	mov #_current_pid_consts, w0		; Constants in w0
-	mov #_pid_voltage_limits, w1		; Limits in w1
-	mov _target_q, w2
-	sub w8, w2, w2		; w2 = I_q - _target_q
-	mov #prev_err_q, w3	; Previous error ptr in w3
-	mov #integral_q, w4	; Integral ptr in w4
-	mov #_current_pid_shifts, w5		; No integral shift
+	;; Add (alpha * (targetpos - pos)) >> alphashift to acc A
+	mov _position, w7
+	mov _target_pos, w2
+	sub w2, w7, w4	 	; w4 = w2 - w7
+	mov _alpha, w5
+	mac w4*w5, B
+	mov _alpha_shift, w6
+	sftac B, w6
+	add A		  	; Add B to A
 	
-	rcall _pid_update
-	mov w0, w6
+	;; Store acc A in sv_x4
+	sac.d A, [w0]
+	
+	;; Subtract K1*iq, K2*pos, K3*vel from acc A
+	mov _state_fb_k1, w4
+	mov _state_fb_k1_shift, w5
+	mov _iq, w6
+	mpy w4*w6, B
+	sftac B, w5
+	sub A
+
+	mov _state_fb_k2, w4
+	mov _state_fb_k2_shift, w5
+	mpy w4*w7, B
+	sftac B, w5
+	sub A
+
+	mov _state_fb_k3, w4
+	mov _state_fb_k3_shift, w5
+	mov _curr_velocity, w6
+	mpy w4*w6, B
+	sftac B, w5
+	sub A
+
+	;; Store result
+	sac A, w6 
+	
 	mov w9, w5		; Vq in w6, Vd in w5
 
-	mov w6, _con_vq
-	mov w5, _con_vd
+	mov w6, _vq
+	mov w5, _vd
 	
 	;; Comment out!
 	mov _vq, w6

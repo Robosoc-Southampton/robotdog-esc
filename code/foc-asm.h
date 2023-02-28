@@ -22,9 +22,13 @@ extern _Fract asm_func foc_update(_Fract ia, _Fract ib, _Fract sin_theta,
 
 extern void asm_func velocity_pid_update(void);
 
-extern _Fract id, iq, curr_velocity, target_velocity;
-extern _Fract target_q, target_d;
+extern _Fract id, iq, curr_velocity, position, target_pos;
+extern _Fract target_d;
 extern uint16_t pwm_ta, pwm_tb, pwm_tc;
-extern _Fract vd,vq;
+extern _Fract vd, vq;
+extern _Fract state_fb_k1, state_fb_k1_shift;
+extern _Fract state_fb_k2, state_fb_k2_shift;
+extern _Fract state_fb_k3, state_fb_k3_shift;
+extern _Fract alpha, alpha_shift;
 
 #endif /* _FOC_ASM_H */

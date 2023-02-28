@@ -22,14 +22,21 @@ enum state_type {
 } state_t;
 
 /* kp, ki, kd */
-_Fract velocity_pid_consts[3] = {0.3r, 0.01r, 0r};
+//_Fract velocity_pid_consts[3] = {0.3r, 0.01r, 0r};
 /* Shifts to apply to P, I, D, and result (positive = right shift) */
-int16_t vel_pid_shifts[4] = {0, 5, 0, -4};
-_Fract pid_current_limits[2] = {-0.15r, 0.15r};
+//int16_t vel_pid_shifts[4] = {0, 5, 0, -4};
+//_Fract pid_current_limits[2] = {-0.15r, 0.15r};
 
 _Fract current_pid_consts[3] = {0.01r, 0.001r, 0r};
 _Fract pid_voltage_limits[2] = {-0.5r, 0.5r};
 int16_t current_pid_shifts[4] = {0, 0, 0, -8};
+
+_Fract state_fb_k1 = 0r, state_fb_k1_shift = 0r;
+_Fract state_fb_k2 = 0r, state_fb_k2_shift = 0r;
+_Fract state_fb_k3 = 0r, state_fb_k3_shift = 0r;
+_Fract alpha = 0r, alpha_shift = 0r;
+
+_Fract position = 0r, target_pos = 0r; 
 
 void config_osc(void)
 {
@@ -79,7 +86,7 @@ int main(void)
      vq = 0.2r;
      vd = 0;
 
-     target_q = 0.01r;
+     //target_q = 0.01r;
      target_d = 0r;
 
      while(1);
@@ -150,7 +157,6 @@ void _ISR _ADCAN13Interrupt(void)
 	       sin_theta = fract_sin(theta);
 	       cos_theta = fract_cos(theta);
 
-	       target_velocity = 0.01r;
 	       vel = hall_get_velocity() >> 10;
 	       push_data_point(CHAN_VEL, vel);
 	       
