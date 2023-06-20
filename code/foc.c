@@ -107,7 +107,7 @@ void _ISR _ADCAN13Interrupt(void)
      /* tmp = pwm_output_is_high(PWM_OUT_A); */
      /* count++; */
 
-     i2c_state_step();
+     //i2c_state_step();
      
      /* Wait for conversion to complete */
      if (!ADSTATLbits.AN13RDY) {

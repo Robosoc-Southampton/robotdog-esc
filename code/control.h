@@ -1,12 +1,14 @@
 #ifndef _CONTROL_H
 #define _CONTROL_H
 
+#include <stdint.h>
+
 void controller_step_time(void);
 uint16_t get_target_pos(void);
 
 /* Ptr to statically allocated array containing target: position,
    velocity, acceleration, jerk */
-uint16_t *get_target_derivs(void);
+int16_t *get_target_derivs(void);
 
 /* Buffer each coefficient as it arrives. When the transmission
    ends, flush the coefficients, and it will do the right thing.

@@ -230,8 +230,8 @@ _foc_update:
 	
 	mov w9, w5		; Vq in w6, Vd in w5
 
-	mov w6, _vq
-	mov w5, _vd
+	;; mov w6, _vq		
+	;; mov w5, _vd
 	
 	;; Comment out!
 	mov _vq, w6
